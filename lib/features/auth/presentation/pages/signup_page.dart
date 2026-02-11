@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/bloc/base_state.dart';
+import '../../../../core/enum/user_role.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -18,6 +19,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
+  UserRole _selectedRole = UserRole.user;
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +108,22 @@ class _SignUpPageState extends State<SignUpPage> {
                         ),
                         const SizedBox(height: 24),
 
+                        DropdownButtonFormField<UserRole>(
+                          value: _selectedRole,
+                          decoration: const InputDecoration(
+                            labelText: 'Role',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: UserRole.values.map((role) {
+                            return DropdownMenuItem(value: role, child: Text(role.name));
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedRole = value!;
+                            });
+                          },
+                        ),
+
                         // Create account
                         SizedBox(
                           width: double.infinity,
@@ -124,6 +142,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                   email: _emailCtrl.text.trim(),
                                   password: _passwordCtrl.text.trim(),
                                   name: _nameCtrl.text.trim(),
+                                  role: _selectedRole,
                                 ),
                               );
                             },

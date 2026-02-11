@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
+import '../../../../core/enum/user_role.dart';
 import '../models/auth_user_model.dart';
 
 abstract class AuthRemoteDataSource {
@@ -9,6 +10,7 @@ abstract class AuthRemoteDataSource {
     required String email,
     required String password,
     required String name,
+    required UserRole role,
   });
 
   Future<void> forgotPassword(String email);
@@ -32,7 +34,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
 
     final user = credential.user!;
-    return AuthUserModel(uid: user.uid, email: user.email!, name: user.displayName!);
+
+    return AuthUserModel(
+      uid: user.uid,
+      email: user.email!,
+      name: user.displayName ?? '',
+      role: UserRole.user, // placeholder
+    );
   }
 
   @override
@@ -40,6 +48,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
     required String password,
     required String name,
+    required UserRole role,
   }) async {
     final credential = await _firebaseAuth.createUserWithEmailAndPassword(
       email: email,
@@ -47,10 +56,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
 
     final user = credential.user!;
-
     await user.updateDisplayName(name);
 
-    return AuthUserModel(uid: user.uid, email: user.email!, name: name);
+    return AuthUserModel(uid: user.uid, email: user.email!, name: name, role: role);
   }
 
   @override

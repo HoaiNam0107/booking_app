@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../../core/enum/user_role.dart';
+
 part 'auth_event.freezed.dart';
 
 abstract class AuthEvent {
@@ -19,6 +21,7 @@ sealed class AuthSignUp extends AuthEvent with _$AuthSignUp {
     required String email,
     required String password,
     required String name,
+    required UserRole role,
   }) = _AuthSignUp;
 }
 

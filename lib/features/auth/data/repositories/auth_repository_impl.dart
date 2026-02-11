@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:injectable/injectable.dart';
 
+import '../../../../core/enum/user_role.dart';
 import '../../domain/entities/auth_user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_firestore_data_source.dart';
@@ -18,12 +19,20 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthUserEntity> login({required String email, required String password}) async {
-    final userModel = await remote.login(email: email, password: password);
+    await remote.login(email: email, password: password);
 
-    final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
-    if (token != null) {
-      await local.saveRefreshToken(token);
+    final firebaseUser = remote.getCurrentFirebaseUser();
+    if (firebaseUser == null) {
+      throw Exception('User not found');
     }
+
+    final userModel = await firestore.getUser(firebaseUser.uid);
+    if (userModel == null) {
+      throw Exception('User data not found');
+    }
+
+    final token = await firebaseUser.getIdToken(true);
+    await local.saveRefreshToken(token!);
 
     return userModel.toEntity();
   }
@@ -33,8 +42,9 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
     required String name,
+    required UserRole role,
   }) async {
-    final userModel = await remote.signUp(email: email, password: password, name: name);
+    final userModel = await remote.signUp(email: email, password: password, name: name, role: role);
 
     await firestore.saveUser(userModel);
 

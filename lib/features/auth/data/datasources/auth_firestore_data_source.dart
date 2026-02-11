@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:injectable/injectable.dart';
 
+import '../../../../core/enum/user_role.dart';
 import '../models/auth_user_model.dart';
 
 abstract class AuthFirestoreDataSource {
@@ -21,7 +22,7 @@ class AuthFirestoreDataSourceImpl implements AuthFirestoreDataSource {
       'email': user.email,
       'name': user.name,
       'createdAt': FieldValue.serverTimestamp(),
-      'role': 'user',
+      'role': user.role.toJson(),
     });
   }
 

@@ -32,6 +32,18 @@ import 'package:booking_app/features/auth/domain/usecases/signup_usecase.dart'
     as _i604;
 import 'package:booking_app/features/auth/presentation/bloc/auth_bloc.dart'
     as _i205;
+import 'package:booking_app/features/home/data/datasources/home_firestore_data_source.dart'
+    as _i802;
+import 'package:booking_app/features/home/data/repositories/home_repository_impl.dart'
+    as _i273;
+import 'package:booking_app/features/home/domain/repositories/home_repository.dart'
+    as _i793;
+import 'package:booking_app/features/home/domain/usecases/create_service_usecase.dart'
+    as _i507;
+import 'package:booking_app/features/home/domain/usecases/get_services_usecase.dart'
+    as _i986;
+import 'package:booking_app/features/home/presentation/bloc/home_bloc.dart'
+    as _i211;
 import 'package:cloud_firestore/cloud_firestore.dart' as _i974;
 import 'package:firebase_auth/firebase_auth.dart' as _i59;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart' as _i558;
@@ -64,6 +76,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i934.AuthRemoteDataSource>(
       () => _i934.AuthRemoteDataSourceImpl(gh<_i59.FirebaseAuth>()),
     );
+    gh.lazySingleton<_i802.HomeFirestoreDataSource>(
+      () => _i802.HomeFirestoreDataSourceImpl(gh<_i974.FirebaseFirestore>()),
+    );
     gh.lazySingleton<_i579.AuthRepository>(
       () => _i680.AuthRepositoryImpl(
         remote: gh<_i934.AuthRemoteDataSource>(),
@@ -83,12 +98,27 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i604.SignUpUseCase>(
       () => _i604.SignUpUseCase(gh<_i579.AuthRepository>()),
     );
+    gh.lazySingleton<_i793.HomeRepository>(
+      () => _i273.HomeRepositoryImpl(gh<_i802.HomeFirestoreDataSource>()),
+    );
     gh.factory<_i205.AuthBloc>(
       () => _i205.AuthBloc(
         gh<_i424.LoginUseCase>(),
         gh<_i604.SignUpUseCase>(),
         gh<_i276.GetCurrentUserUseCase>(),
         gh<_i236.LogoutUseCase>(),
+      ),
+    );
+    gh.factory<_i507.CreateServiceUseCase>(
+      () => _i507.CreateServiceUseCase(gh<_i793.HomeRepository>()),
+    );
+    gh.factory<_i986.GetServicesUseCase>(
+      () => _i986.GetServicesUseCase(gh<_i793.HomeRepository>()),
+    );
+    gh.factory<_i211.HomeBloc>(
+      () => _i211.HomeBloc(
+        gh<_i986.GetServicesUseCase>(),
+        gh<_i507.CreateServiceUseCase>(),
       ),
     );
     return this;

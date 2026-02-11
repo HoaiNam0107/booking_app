@@ -1,5 +1,6 @@
 import 'package:injectable/injectable.dart';
 
+import '../../../../core/enum/user_role.dart';
 import '../entities/auth_user_entity.dart';
 import '../repositories/auth_repository.dart';
 
@@ -13,7 +14,8 @@ class SignUpUseCase {
     required String email,
     required String password,
     required String name,
+    required UserRole role,
   }) {
-    return repository.signUp(email: email, password: password, name: name);
+    return repository.signUp(email: email, password: password, name: name, role: role);
   }
 }

@@ -1,3 +1,4 @@
+import '../../../../core/enum/user_role.dart';
 import '../entities/auth_user_entity.dart';
 
 abstract class AuthRepository {
@@ -7,6 +8,7 @@ abstract class AuthRepository {
     required String email,
     required String password,
     required String name,
+    required UserRole role,
   });
 
   Future<void> forgotPassword(String email);

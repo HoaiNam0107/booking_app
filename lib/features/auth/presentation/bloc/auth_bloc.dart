@@ -49,6 +49,7 @@ class AuthBloc extends BaseBloc<AuthEvent, AuthState> {
         email: event.email,
         password: event.password,
         name: event.name,
+        role: event.role,
       );
 
       emit(state.copyWith(status: BaseState.success(user)));
