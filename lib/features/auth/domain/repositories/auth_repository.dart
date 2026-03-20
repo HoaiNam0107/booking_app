@@ -1,19 +1,49 @@
-import '../../../../core/enum/user_role.dart';
-import '../entities/auth_user_entity.dart';
+import 'package:booking_app/core/error/failures.dart';
+import 'package:booking_app/core/utils/either.dart';
+import 'package:booking_app/features/auth/domain/entities/user_entity.dart';
 
 abstract class AuthRepository {
-  Future<AuthUserEntity> login({required String email, required String password});
-
-  Future<AuthUserEntity> signUp({
+  /// Đăng nhập email/password
+  Future<Either<Failure, UserEntity>> loginWithEmailPassword({
     required String email,
     required String password,
-    required String name,
-    required UserRole role,
   });
 
-  Future<void> forgotPassword(String email);
+  /// Đăng ký khách hàng
+  Future<Either<Failure, UserEntity>> registerCustomer({
+    required String email,
+    required String password,
+    required String displayName,
+    required String phoneNumber,
+    required String dateOfBirth,
+    required String address,
+  });
 
-  Future<void> logout();
+  /// Đăng ký người bán
+  Future<Either<Failure, UserEntity>> registerSeller({
+    required String email,
+    required String password,
+    required String displayName,
+    required String phoneNumber,
+    required String dateOfBirth,
+    required String address,
+    required String shopName,
+    required String shopAddress,
+    required String shopCategory,
+  });
 
-  Future<AuthUserEntity?> getCurrentUser();
+  /// Đăng xuất
+  Future<Either<Failure, void>> logout();
+
+  /// Lấy user hiện tại (từ local cache)
+  Future<Either<Failure, UserEntity?>> getCurrentUser();
+
+  /// Stream realtime trạng thái auth
+  Stream<UserEntity?> get authStateChanges;
+
+  /// Gửi email đặt lại mật khẩu
+  Future<Either<Failure, void>> sendPasswordResetEmail(String email);
+
+  /// Xoá session local
+  Future<Either<Failure, void>> clearLocalSession();
 }

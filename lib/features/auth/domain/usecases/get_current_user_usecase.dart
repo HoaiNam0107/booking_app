@@ -1,14 +1,15 @@
+import 'package:booking_app/core/error/failures.dart';
+import 'package:booking_app/core/utils/either.dart';
+import 'package:booking_app/core/utils/usecase.dart';
+import 'package:booking_app/features/auth/domain/entities/user_entity.dart';
+import 'package:booking_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:injectable/injectable.dart';
 
-import '../entities/auth_user_entity.dart';
-import '../repositories/auth_repository.dart';
-@injectable
-class GetCurrentUserUseCase {
-  final AuthRepository repository;
+@lazySingleton
+class GetCurrentUserUseCase extends UseCaseNoParams<UserEntity?> {
+  final AuthRepository _repository;
+  GetCurrentUserUseCase(this._repository);
 
-  GetCurrentUserUseCase(this.repository);
-
-  Future<AuthUserEntity?> call() {
-    return repository.getCurrentUser();
-  }
+  @override
+  Future<Either<Failure, UserEntity?>> call() => _repository.getCurrentUser();
 }

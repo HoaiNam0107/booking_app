@@ -1,78 +1,164 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:booking_app/core/error/exceptions.dart';
+import 'package:booking_app/core/error/failures.dart';
+import 'package:booking_app/core/utils/either.dart';
+import 'package:booking_app/features/auth/data/mappers/user_mapper.dart';
+import 'package:booking_app/features/auth/datasources/auth_local_datasource.dart';
+import 'package:booking_app/features/auth/datasources/auth_remote_datasource.dart';
+import 'package:booking_app/features/auth/domain/entities/user_entity.dart';
+import 'package:booking_app/features/auth/domain/repositories/auth_repository.dart';
 import 'package:injectable/injectable.dart';
-
-import '../../../../core/enum/user_role.dart';
-import '../../domain/entities/auth_user_entity.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../datasources/auth_firestore_data_source.dart';
-import '../datasources/auth_local_data_source.dart';
-import '../datasources/auth_remote_data_source.dart';
-import '../models/auth_user_model.dart';
 
 @LazySingleton(as: AuthRepository)
 class AuthRepositoryImpl implements AuthRepository {
-  final AuthRemoteDataSource remote;
-  final AuthLocalDataSource local;
-  final AuthFirestoreDataSource firestore;
+  final AuthRemoteDataSource _remote;
+  final AuthLocalDataSource _local;
 
-  AuthRepositoryImpl({required this.remote, required this.local, required this.firestore});
-
-  @override
-  Future<AuthUserEntity> login({required String email, required String password}) async {
-    await remote.login(email: email, password: password);
-
-    final firebaseUser = remote.getCurrentFirebaseUser();
-    if (firebaseUser == null) {
-      throw Exception('User not found');
-    }
-
-    final userModel = await firestore.getUser(firebaseUser.uid);
-    if (userModel == null) {
-      throw Exception('User data not found');
-    }
-
-    final token = await firebaseUser.getIdToken(true);
-    await local.saveRefreshToken(token!);
-
-    return userModel.toEntity();
-  }
+  AuthRepositoryImpl(this._remote, this._local);
 
   @override
-  Future<AuthUserEntity> signUp({
+  Future<Either<Failure, UserEntity>> loginWithEmailPassword({
     required String email,
     required String password,
-    required String name,
-    required UserRole role,
   }) async {
-    final userModel = await remote.signUp(email: email, password: password, name: name, role: role);
-
-    await firestore.saveUser(userModel);
-
-    final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
-    if (token != null) {
-      await local.saveRefreshToken(token);
+    try {
+      final model = await _remote.loginWithEmailPassword(
+        email: email,
+        password: password,
+      );
+      await _local.saveUserId(model.id);
+      return Right(UserMapper.toEntity(model));
+    } on AuthException catch (e) {
+      // Bao gồm cả trường hợp seller bị rejected (statusCode 403)
+      return Left(AuthFailure(message: e.message, statusCode: e.statusCode));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } on UnknownException catch (e) {
+      return Left(UnknownFailure(message: e.message));
     }
-
-    return userModel.toEntity();
   }
 
   @override
-  Future<void> forgotPassword(String email) {
-    return remote.forgotPassword(email);
+  Future<Either<Failure, UserEntity>> registerCustomer({
+    required String email,
+    required String password,
+    required String displayName,
+    required String phoneNumber,
+    required String dateOfBirth,
+    required String address,
+  }) async {
+    try {
+      final model = await _remote.registerWithEmailPassword(
+        email: email,
+        password: password,
+        extraData: {
+          'displayName': displayName,
+          'phoneNumber': phoneNumber,
+          'dateOfBirth': dateOfBirth,
+          'address': address,
+          'role': 'customer',
+        },
+      );
+      await _local.saveUserId(model.id);
+      return Right(UserMapper.toEntity(model));
+    } on AuthException catch (e) {
+      return Left(AuthFailure(message: e.message, statusCode: e.statusCode));
+    } on UnknownException catch (e) {
+      return Left(UnknownFailure(message: e.message));
+    }
   }
 
   @override
-  Future<void> logout() async {
-    await remote.logout();
-    await local.clear();
+  Future<Either<Failure, UserEntity>> registerSeller({
+    required String email,
+    required String password,
+    required String displayName,
+    required String phoneNumber,
+    required String dateOfBirth,
+    required String address,
+    required String shopName,
+    required String shopAddress,
+    required String shopCategory,
+  }) async {
+    try {
+      final model = await _remote.registerWithEmailPassword(
+        email: email,
+        password: password,
+        extraData: {
+          'displayName': displayName,
+          'phoneNumber': phoneNumber,
+          'dateOfBirth': dateOfBirth,
+          'address': address,
+          'role': 'seller',
+          'shopName': shopName,
+          'shopAddress': shopAddress,
+          'shopCategory': shopCategory,
+          // sellerStatus = 'pending' được set trong datasource
+        },
+      );
+      await _local.saveUserId(model.id);
+      return Right(UserMapper.toEntity(model));
+    } on AuthException catch (e) {
+      return Left(AuthFailure(message: e.message, statusCode: e.statusCode));
+    } on UnknownException catch (e) {
+      return Left(UnknownFailure(message: e.message));
+    }
   }
 
   @override
-  Future<AuthUserEntity?> getCurrentUser() async {
-    final firebaseUser = remote.getCurrentFirebaseUser();
-    if (firebaseUser == null) return null;
+  Future<Either<Failure, void>> logout() async {
+    try {
+      await _remote.logout();
+      await _local.clearSession();
+      return const Right(null);
+    } on UnknownException catch (e) {
+      return Left(UnknownFailure(message: e.message));
+    } on CacheException catch (e) {
+      return Left(CacheFailure(message: e.message));
+    }
+  }
 
-    final userModel = await firestore.getUser(firebaseUser.uid);
-    return userModel?.toEntity();
+  @override
+  Future<Either<Failure, UserEntity?>> getCurrentUser() async {
+    try {
+      final uid = await _local.getUserId();
+      if (uid == null) return const Right(null);
+      final model = await _remote.fetchCurrentUser(uid);
+      if (model == null) return const Right(null);
+      return Right(UserMapper.toEntity(model));
+    } on CacheException catch (e) {
+      return Left(CacheFailure(message: e.message));
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    }
+  }
+
+  @override
+  Stream<UserEntity?> get authStateChanges {
+    return _remote.authStateChanges.asyncMap((firebaseUser) async {
+      if (firebaseUser == null) return null;
+      final model = await _remote.fetchCurrentUser(firebaseUser.uid);
+      if (model == null) return null;
+      return UserMapper.toEntity(model);
+    });
+  }
+
+  @override
+  Future<Either<Failure, void>> sendPasswordResetEmail(String email) async {
+    try {
+      await _remote.sendPasswordResetEmail(email);
+      return const Right(null);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(message: e.message));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> clearLocalSession() async {
+    try {
+      await _local.clearSession();
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(CacheFailure(message: e.message));
+    }
   }
 }

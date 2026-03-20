@@ -1,15 +1,26 @@
+import 'package:booking_app/core/error/failures.dart';
+import 'package:booking_app/core/utils/either.dart';
+import 'package:booking_app/core/utils/usecase.dart';
+import 'package:booking_app/features/auth/domain/entities/user_entity.dart';
+import 'package:booking_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:equatable/equatable.dart';
 import 'package:injectable/injectable.dart';
 
-import '../entities/auth_user_entity.dart';
-import '../repositories/auth_repository.dart';
+@lazySingleton
+class LoginUseCase extends UseCase<UserEntity, LoginParams> {
+  final AuthRepository _repository;
+  LoginUseCase(this._repository);
 
-@injectable
-class LoginUseCase {
-  final AuthRepository repository;
+  @override
+  Future<Either<Failure, UserEntity>> call(LoginParams params) =>
+      _repository.loginWithEmailPassword(email: params.email, password: params.password);
+}
 
-  LoginUseCase(this.repository);
+class LoginParams extends Equatable {
+  final String email;
+  final String password;
+  const LoginParams({required this.email, required this.password});
 
-  Future<AuthUserEntity> call({required String email, required String password}) {
-    return repository.login(email: email, password: password);
-  }
+  @override
+  List<Object?> get props => [email, password];
 }
